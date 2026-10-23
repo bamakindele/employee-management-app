@@ -1,0 +1,44 @@
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.ppk
+*.jks
+*.keystore
+id_rsa
+id_ecdsa
+id_ed25519
+credentials.json
+credentials.*
+*service-account*.json
+secrets/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Node.js and build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+
+# Logs and local overrides
+*.log
+*.local
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
