@@ -20,6 +20,10 @@ credentials.json
 credentials.*
 *service-account*.json
 secrets/
+**/.aws/credentials
+**/.ssh/
+**/.kube/config
+**/.netrc
 
 # Python
 .venv/
@@ -42,3 +46,12 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Terraform
+.terraform/
+*.tfvars
+*.tfvars.json
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log

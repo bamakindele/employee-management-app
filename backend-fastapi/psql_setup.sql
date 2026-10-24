@@ -1,8 +1,10 @@
 -- Create users to access database
-CREATE USER employee_app WITH PASSWORD 'Password123!';
+CREATE USER employee_app;
+\password employee_app
 GRANT CONNECT ON DATABASE employee_management TO employee_app;
 
-CREATE USER bammie WITH PASSWORD 'Password123!';
+CREATE USER bammie;
+\password bammie
 GRANT CONNECT ON DATABASE employee_management TO employee_app;
 
 -- Connect to the employee_management database
