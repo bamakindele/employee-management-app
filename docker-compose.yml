@@ -2,6 +2,10 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # Vite embeds this value at build time; localhost is the host browser,
+        # not the frontend container or the backend service.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api}
     ports:
       - "5173:80"
     depends_on:
@@ -13,6 +17,8 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # Containers reach each other by Compose service name; localhost here
+      # would point back to this backend container instead of PostgreSQL.
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-employee_app}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-employee_management}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     depends_on:
@@ -28,6 +34,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # PostgreSQL keeps its initialized users/passwords in this persistent
+      # volume; changing POSTGRES_PASSWORD in .env does not update an old role.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

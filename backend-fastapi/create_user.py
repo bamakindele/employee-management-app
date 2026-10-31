@@ -9,10 +9,10 @@ from werkzeug.security import generate_password_hash
 Base.metadata.create_all(engine)
 
 username = input("New username: ").strip()
-password = getpass("New password (minimum 12 characters): ")
+password = getpass("New password (minimum 6 characters): ")
 
-if not username or len(password) < 12:
-    raise SystemExit("Enter a username and a password of at least 12 characters.")
+if not username or len(password) < 6:
+    raise SystemExit("Enter a username and a password of at least 6 characters.")
 
 with SessionLocal() as db:
     existing = db.scalar(

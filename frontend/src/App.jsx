@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { Users, LogOut, Plus, Pencil, RefreshCw } from "lucide-react";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000/api";
+const API =
+  import.meta.env.VITE_API_URL ||
+  `http://localhost:${import.meta.env.DEV ? 8001 : 8000}/api`;
 
 const emptyEmployee = {
   first_name: "",

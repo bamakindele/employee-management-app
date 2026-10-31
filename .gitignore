@@ -49,9 +49,19 @@ Thumbs.db
 
 # Terraform
 .terraform/
+**/.terraform/
 *.tfvars
 *.tfvars.json
 *.tfstate
 *.tfstate.*
 *.tfplan
 crash.log
+crash.log.*
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Live AWS console screenshots can expose account IDs, resource IDs, endpoints, or IPs.
+terraform/screenshots/*.png
+!terraform/screenshots/terraform-graph.png
