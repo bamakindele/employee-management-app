@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+import jwt
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import (
     DECIMAL, Integer, String, create_engine, select
@@ -117,8 +117,8 @@ def current_user(
         )
         username = payload.get("sub")
         if not username:
-            raise JWTError("Missing subject")
-    except JWTError:
+            raise jwt.InvalidTokenError("Missing subject")
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token",
