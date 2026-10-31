@@ -82,3 +82,10 @@ Compose separately runs a PostgreSQL 15 server in its `postgres` container.
 The server version and data depend on the host and port configured in the
 client. Because Compose publishes its PostgreSQL container on host port `5432`,
 a separate local PostgreSQL service cannot use that same port at the same time.
+
+# Trivy Scan Findings
+During CI pipeline build, Trivy scan detected a few dependencies that are vulnerable
+Backend: jaraco.context -- CVE-2026-23949
+Backend: wheel -- CVE-2026-24049
+Frontend: brotli-libs -- CVE-2026-111497
+Frontend: curl -- CVE-2026-92392
