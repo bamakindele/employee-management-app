@@ -53,7 +53,7 @@ jobs:
 
       # Fail CI for actionable, unfixed HIGH/CRITICAL OS or library vulnerabilities.
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: employee-management-backend:ci
           format: table
@@ -63,7 +63,7 @@ jobs:
           severity: HIGH,CRITICAL
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: employee-management-frontend:ci
           format: table
