@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "27"
+          node-version: "26"
 
       - name: Install backend dependencies
         working-directory: backend-fastapi
