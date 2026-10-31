@@ -50,6 +50,11 @@ jobs:
 
       - name: Build frontend image
         run: docker build -t employee-management-frontend:ci ./frontend
+      
+      # Upgrade host runner tools to patch vulnerabilities
+      - name: Upgrade host runner tools to patch vulnerabilities
+        run: python -m pip install --upgrade jaraco.context>=6.1.0 wheel>=0.46.2
+
 
       # Fail CI for actionable, unfixed HIGH/CRITICAL OS or library vulnerabilities.
       - name: Scan backend image with Trivy
