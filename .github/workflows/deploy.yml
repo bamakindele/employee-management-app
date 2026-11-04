@@ -1,0 +1,94 @@
+name: Deploy Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # This workflow is the only place that builds, scans, and publishes container images.
+      - name: Build frontend image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build from the frontend Dockerfile and tag the local image with this commit.
+          # A failed Docker build stops the job before scanning or publishing.
+          docker build \
+            --tag "$FRONTEND_REPO:$IMAGE_TAG" \
+            ./frontend
+
+      - name: Build backend image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build from the backend Dockerfile using the backend directory as context.
+          # The same commit tag is used for both images so releases can be traced.
+          docker build \
+            --tag "$BACKEND_REPO:$IMAGE_TAG" \
+            ./backend-fastapi
+
+      # Trivy reports HIGH/CRITICAL OS and library findings; exit-code 0 keeps
+      # findings informational, matching the prior CI workflow behavior.
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: backend:${{ github.sha }}
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: frontend:${{ github.sha }}
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      # Delay cloud authentication until both images have built and completed scanning.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push images to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Add the ECR registry prefix to each locally built image.
+          # Keeping the commit SHA as the tag makes the published images traceable.
+          docker tag "$FRONTEND_REPO:$IMAGE_TAG" "$ECR_REGISTRY/$FRONTEND_REPO:$IMAGE_TAG"
+          docker tag "$BACKEND_REPO:$IMAGE_TAG" "$ECR_REGISTRY/$BACKEND_REPO:$IMAGE_TAG"
+
+          # Publish only after both local images were built and scanned successfully.
+          docker push "$ECR_REGISTRY/$FRONTEND_REPO:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$BACKEND_REPO:$IMAGE_TAG"
+
+env:
+  AWS_REGION: us-east-1
+  FRONTEND_REPO: frontend
+  BACKEND_REPO: backend
+  IMAGE_TAG: ${{ github.sha }}

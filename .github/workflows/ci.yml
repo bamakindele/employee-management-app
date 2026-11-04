@@ -31,48 +31,29 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: backend-fastapi
-        run: pip install -r requirements.txt
+        run: |
+          # Install the exact backend dependencies declared by the application.
+          # A failure here usually means requirements.txt contains an unavailable
+          # package or a dependency constraint that cannot be resolved.
+          python -m pip install -r requirements.txt
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: |
+          # Install dependencies from the lockfile without changing it.
+          # This keeps CI consistent with local and repeat workflow runs.
+          npm ci
 
       - name: Build React app
         working-directory: frontend
-        run: npm run build
+        run: |
+          # Compile the frontend bundle and fail CI if the Vite build reports errors.
+          # Docker image creation and publication are handled only by deploy.yml.
+          npm run build
 
       - name: Validate FastAPI Python files
         working-directory: backend-fastapi
-        run: python -m compileall -q .
-
-      - name: Build backend image
-        run: docker build -t employee-management-backend:ci ./backend-fastapi
-
-      - name: Build frontend image
-        run: docker build -t employee-management-frontend:ci ./frontend
-      
-      # Upgrade host runner tools to patch vulnerabilities
-      - name: Upgrade host runner tools to patch vulnerabilities
-        run: python -m pip install --upgrade jaraco.context>=6.1.0 wheel>=0.46.2
-
-
-      # Fail CI for actionable, unfixed HIGH/CRITICAL OS or library vulnerabilities.
-      - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: employee-management-backend:ci
-          format: table
-          exit-code: "0"
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-
-      - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: employee-management-frontend:ci
-          format: table
-          exit-code: "0"
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
+        run: |
+          # Compile Python modules to catch syntax errors without running the app.
+          # The quiet flag keeps successful CI logs concise; failures still show details.
+          python -m compileall -q .
