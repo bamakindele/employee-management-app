@@ -57,3 +57,86 @@ jobs:
           # Compile Python modules to catch syntax errors without running the app.
           # The quiet flag keeps successful CI logs concise; failures still show details.
           python -m compileall -q .
+
+  publish-images:
+    name: Build and publish ECR images
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      FRONTEND_REPO: frontend
+      BACKEND_REPO: backend
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: |
+          # Build the frontend container from its Dockerfile and tag it with this commit.
+          # The explicit latest tag makes the newest successful main build easy to find.
+          docker build \
+            --tag "$FRONTEND_REPO:$IMAGE_TAG" \
+            --tag "$FRONTEND_REPO:latest" \
+            ./frontend
+
+      - name: Build backend image
+        run: |
+          # Build the backend container from its Dockerfile and tag it consistently
+          # with the frontend image so both images can be traced to this commit.
+          docker build \
+            --tag "$BACKEND_REPO:$IMAGE_TAG" \
+            --tag "$BACKEND_REPO:latest" \
+            ./backend-fastapi
+
+      # Report HIGH/CRITICAL OS and library findings without blocking the push,
+      # matching the existing Trivy policy. Set exit-code to "1" to enforce failures.
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: backend:${{ github.sha }}
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: frontend:${{ github.sha }}
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      # Request short-lived AWS credentials only after code checks, image builds,
+      # and scans complete. GitHub OIDC must be trusted by the configured role.
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push images to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          # Add the authenticated ECR registry prefix to each local image.
+          # Push both commit-specific tags and the convenient rolling latest tags.
+          for repository in "$FRONTEND_REPO" "$BACKEND_REPO"; do
+            docker tag "$repository:$IMAGE_TAG" "$ECR_REGISTRY/$repository:$IMAGE_TAG"
+            docker tag "$repository:latest" "$ECR_REGISTRY/$repository:latest"
+            docker push "$ECR_REGISTRY/$repository:$IMAGE_TAG"
+            docker push "$ECR_REGISTRY/$repository:latest"
+          done
