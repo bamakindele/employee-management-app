@@ -1,16 +1,34 @@
-# React + Vite
+# Employee Management frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the React application built with Vite.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install dependencies and start the development server:
 
-## React Compiler
+```bash
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The local frontend uses `http://localhost:5174` by default. See the repository
+[README](../README.md) for backend and database setup.
 
-## Expanding the ESLint configuration
+## Build and lint
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run build
+npm run lint
+```
+
+The GitHub Actions **CI Pipeline** runs the production build as part of its
+application checks.
+
+## Docker and Amazon ECR
+
+The frontend Dockerfile is in this directory. On pushes to `main`, after the
+application checks pass, the **Build and publish ECR images** job in
+`.github/workflows/ci.yml` builds and scans the frontend image and pushes it to
+the AWS ECR repository named `frontend` in `us-east-1`. It publishes both the
+commit-SHA tag and `latest`. See [Terraform documentation](../terraform/README.md)
+for OIDC and ECR setup.
