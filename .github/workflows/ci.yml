@@ -9,7 +9,6 @@ on:
       - main
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -49,7 +48,7 @@ jobs:
         working-directory: frontend
         run: |
           # Compile the frontend bundle and fail CI if the Vite build reports errors.
-          # Docker image creation and publication are handled only by deploy.yml.
+          # Docker image creation and publication happen in the publish-images job.
           npm run build
 
       - name: Validate FastAPI Python files
