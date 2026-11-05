@@ -5,7 +5,7 @@ resource "aws_ecr_repository" "frontend" {
   name = "frontend"
 }
 
-resource "aws_ecr_repository" "backend" {
+resource "aws_ecr_repository" "backend-fastapi" {
 
-  name = "backend"
+  name = "backend-fastapi"
 }
