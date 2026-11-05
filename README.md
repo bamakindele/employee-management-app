@@ -72,6 +72,37 @@ docker compose exec backend python create_user.py
 The script prompts for a username and password. Employee directory records are
 added separately from the signed-in frontend.
 
+## CI and publishing images to Amazon ECR
+
+The GitHub Actions workflow at `.github/workflows/ci.yml` runs application
+checks for pull requests and pushes to `main`. For a push to `main`, it also
+runs the **Build and publish ECR images** job after the checks pass. That job
+builds and scans the frontend and backend container images, then pushes them
+to the `frontend` and `backend` ECR repositories in `us-east-1`.
+
+Each image is pushed with both the triggering commit SHA and the rolling
+`latest` tag. Trivy reports HIGH and CRITICAL findings, but currently does not
+fail the job because its `exit-code` is set to `0`.
+
+To enable publishing:
+
+1. Provision the GitHub OIDC provider, IAM role, and ECR push policy using the
+   instructions in [terraform/README.md](terraform/README.md).
+2. In the GitHub repository, open **Settings → Secrets and variables →
+   Actions**, add a repository secret named `AWS_ROLE_ARN`, and set its value
+   to the IAM role ARN created by Terraform (for example,
+   `arn:aws:iam::<account-id>:role/github-actions-ecr-role`).
+3. Ensure the `frontend` and `backend` ECR repositories exist in the same AWS
+   account and `us-east-1` region as the IAM role.
+4. Push a commit to `main` and inspect the **Build and publish ECR images** job
+   in the **CI Pipeline** run. Pull-request runs do not publish images.
+
+The workflow uses short-lived credentials through GitHub OIDC; do not add
+long-lived AWS access keys to GitHub secrets. If authentication fails, check
+the `AWS_ROLE_ARN` secret and that the IAM trust policy allows this repository's
+`main` branch. If a push fails, check the ECR repository names, AWS region, and
+the role's ECR permissions.
+
 ## PostgreSQL client and server
 
 `psql 15.19` is the PostgreSQL command-line client available in PowerShell;

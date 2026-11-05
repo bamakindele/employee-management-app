@@ -1,5 +1,6 @@
 name: CI Pipeline
 
+# Run checks for pull requests and pushes to main. Only pushes to main publish images.
 on:
   push:
     branches:
@@ -8,10 +9,13 @@ on:
     branches:
       - main
 
+# Keep the workflow read-only by default. AWS OIDC permission is granted only
+# to the publishing job below.
 permissions:
   contents: read
 
 jobs:
+  # Run application checks before any container images are built or published.
   build:
     runs-on: ubuntu-latest
 
@@ -19,6 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Use the repository's supported runtimes so build results are reproducible.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,6 +34,7 @@ jobs:
         with:
           node-version: "26"
 
+      # Install dependencies and run the frontend production build.
       - name: Install backend dependencies
         working-directory: backend-fastapi
         run: |
@@ -60,16 +66,21 @@ jobs:
 
   publish-images:
     name: Build and publish ECR images
+    # Do not publish unless the application checks above pass.
     needs: build
+    # The OIDC trust policy accepts only this repository's main branch.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Required by GitHub to issue an OIDC token for AWS role assumption.
       id-token: write
     env:
+      # These values must match the AWS region and ECR repositories in Terraform.
       AWS_REGION: us-east-1
       FRONTEND_REPO: frontend
       BACKEND_REPO: backend
+      # Tag images with the triggering commit so each published build is traceable.
       IMAGE_TAG: ${{ github.sha }}
 
     steps:
@@ -95,7 +106,7 @@ jobs:
             ./backend-fastapi
 
       # Report HIGH/CRITICAL OS and library findings without blocking the push,
-      # matching the existing Trivy policy. Set exit-code to "1" to enforce failures.
+      # matching the current policy. Set exit-code to "1" to block pushes on findings.
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -117,17 +128,21 @@ jobs:
           severity: HIGH,CRITICAL
 
       # Request short-lived AWS credentials only after code checks, image builds,
-      # and scans complete. GitHub OIDC must be trusted by the configured role.
+      # and scans complete. If this fails, check AWS_ROLE_ARN and the role's OIDC
+      # trust conditions for this repository's main branch.
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      # Print the assumed identity to help diagnose AWS account/role configuration.
       - name: Verify AWS credentials
         run: |
           # Confirm that the OIDC role was assumed successfully and the AWS CLI is usable.
           aws sts get-caller-identity
 
+      # Authenticate Docker to the registry in the AWS account from the assumed role.
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -136,8 +151,9 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          # Add the authenticated ECR registry prefix to each local image.
-          # Push both commit-specific tags and the convenient rolling latest tags.
+          # Add the authenticated registry prefix, then push both commit-specific
+          # and rolling latest tags. If a push fails, verify the repositories exist
+          # in AWS_REGION and that the role permits writes to both repository ARNs.
           for repository in "$FRONTEND_REPO" "$BACKEND_REPO"; do
             docker tag "$repository:$IMAGE_TAG" "$ECR_REGISTRY/$repository:$IMAGE_TAG"
             docker tag "$repository:latest" "$ECR_REGISTRY/$repository:latest"
