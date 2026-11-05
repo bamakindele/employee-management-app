@@ -48,6 +48,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
             "ecr:UploadLayerPart",
             "ecr:BatchGetImage",
             "ecr:DescribeRepositories"
+            "ecr:GetDownloadUrlForLayer"
         ]
         Resource = "*"
       },
@@ -68,3 +69,5 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
     ]
   })
 }
+
+
