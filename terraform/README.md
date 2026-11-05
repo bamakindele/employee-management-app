@@ -28,6 +28,7 @@ The `.tf` files are grouped by infrastructure concern:
 | `internet_gateway.tf`, `nat_gateway.tf`, `route_tables.tf` | Internet access and subnet routing |
 | `security_groups.tf` | EKS node and RDS network rules |
 | `iam_eks_cluster_role.tf`, `iam_node_group_role.tf` | IAM roles and policies for EKS |
+| `iam_oidc_github_ecr_role.tf` | GitHub Actions OIDC provider, deployment role, and scoped ECR push policy |
 | `eks_cluster.tf`, `eks_node_group.tf` | EKS control plane and managed worker nodes |
 | `ecr.tf` | Frontend and backend container image repositories |
 | `rds_subnet_group.tf`, `rds.tf` | Private database subnet group and PostgreSQL instance |
@@ -39,6 +40,7 @@ The `.terraform.lock.hcl` file records the selected provider versions. Keep it u
 
 - Terraform `>= 1.5.0`
 - AWS CLI credentials configured for an account with permission to manage the resources in this configuration
+- GitHub repository administrator access to add the `AWS_ROLE_ARN` Actions secret
 - An AWS region supported by the configuration
 
 The AWS provider region defaults to `us-east-1`. The subnet CIDRs and availability zones are currently hard-coded in `subnets.tf` to `us-east-1a` and `us-east-1b`; update those values together with the region before deploying elsewhere.
@@ -50,6 +52,46 @@ The AWS provider region defaults to `us-east-1`. The subnet CIDRs and availabili
 Do not commit credentials or real passwords. The repository `.gitignore` excludes `*.tfvars`, including `terraform.tfvars`. For local development, supply values in an ignored `terraform.tfvars` file, or use environment variables such as `TF_VAR_db_username` and `TF_VAR_db_password`. For shared or production deployments, retrieve secrets from an approved secret manager and avoid storing them in plaintext files or shell history.
 
 Terraform state can contain sensitive values. This configuration currently uses Terraform's default local backend; protect the state file and its backups, do not commit them, and configure an encrypted remote backend with state locking before team or production use.
+
+## GitHub Actions OIDC and ECR publishing
+
+The root `.github/workflows/ci.yml` workflow runs application checks on pull
+requests and pushes to `main`. Only a push to `main` that passes those checks
+runs the **Build and publish ECR images** job. It builds and scans the frontend
+and backend images, then pushes both the commit-SHA and `latest` tags to the
+`frontend` and `backend` ECR repositories in `us-east-1`. Trivy findings are
+currently informational and do not block publishing.
+
+The OIDC trust policy in `modules/iam_oidc_github_ecr_role.tf` restricts role
+assumption to `bamakindele/employee-management-app` on `main`; its inline
+permissions allow image pushes only to the two application repositories. The
+workflow uses short-lived OIDC credentials and requires a GitHub repository
+Actions secret named `AWS_ROLE_ARN`, whose value is the IAM role ARN. Add or
+update that secret in **GitHub repository Settings → Secrets and variables →
+Actions**. Do not store long-lived AWS access keys in GitHub.
+
+The ECR repositories are defined separately in `modules/ecr.tf`. Ensure both
+repositories and the OIDC role are provisioned in the same AWS account and
+region used by the workflow.
+
+To review and apply only the GitHub OIDC role and its ECR permissions, run from
+the repository root:
+
+```powershell
+terraform -chdir=terraform/modules plan `
+  -target=aws_iam_role.github_actions_ecr `
+  -target=aws_iam_role_policy.github_actions_ecr
+
+# Review the plan before applying.
+terraform -chdir=terraform/modules apply `
+  -target=aws_iam_role.github_actions_ecr `
+  -target=aws_iam_role_policy.github_actions_ecr
+```
+
+Terraform includes the OIDC provider as a dependency when needed. Targeted
+operations are intended only for this focused setup; review the plan carefully
+and run a regular plan afterward to check for other pending infrastructure
+changes.
 
 ## Initialize, validate, and deploy
 
