@@ -120,3 +120,89 @@ Backend: jaraco.context -- CVE-2026-23949
 Backend: wheel -- CVE-2026-24049
 Frontend: brotli-libs -- CVE-2026-111497
 Frontend: curl -- CVE-2026-92392
+
+# kubernetes: 
+
+## Local Kubernetes validation
+
+Local Kubernetes validation was performed using Docker Desktop Kubernetes.
+Application deployments successfully created pods and ReplicaSets. Image pulls
+from private Amazon ECR repositories failed as expected because Docker Desktop
+Kubernetes was not configured with ECR authentication. In production, Amazon
+EKS worker nodes authenticate using IAM roles and pull images directly from ECR.
+
+1. Namespace
+
+namespace/
+
+namespace.yaml
+
+development.yaml
+
+Creates the namespace where your application resources will run.
+
+2. ConfigMaps
+
+configmaps/
+
+- application-config.yaml
+
+Creates application configuration before deploying containers.
+
+3. Secrets
+
+secrets/
+
+- placeholder-secret.yaml
+
+Creates credentials and sensitive configuration required by your application. Replace placeholders with real secrets securely.
+
+4. PostgreSQL storage
+
+postgres/
+
+- pvc.yaml
+
+Creates persistent storage for the PostgreSQL database.
+
+5. PostgreSQL database
+
+postgres/
+
+deployment.yaml
+
+service.yaml
+
+Starts the database and exposes it internally.
+
+6. Backend (FastAPI)
+
+backend/
+
+deployment.yaml
+
+service.yaml
+
+hpa.yaml
+
+Deploys your FastAPI application and exposes it internally. Configure the HPA after its metrics prerequisites are available.
+
+7. Frontend
+
+frontend/
+
+deployment.yaml
+
+service.yaml
+
+hpa.yaml
+
+Deploys your frontend and exposes it internally.
+
+8. Ingress
+
+ingress/
+
+- ingress.yaml
+
+Configures external HTTP/HTTPS access to your frontend and backend.
