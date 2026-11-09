@@ -6,6 +6,28 @@ metadata:
 
   namespace: production
 
+env:
+
+- name: DB_USERNAME
+
+  valueFrom:
+
+    secretKeyRef:
+
+      name: postgres-secret
+
+      key: db_username
+
+- name: DB_PASSWORD
+
+  valueFrom:
+
+    secretKeyRef:
+
+      name: postgres-secret
+
+      key: db_password
+
 spec:
 
   replicas: 2
