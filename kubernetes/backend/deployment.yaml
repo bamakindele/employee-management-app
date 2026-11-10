@@ -1,54 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
-  name: backend
-
-  namespace: production
-
-env:
-
-- name: DB_USERNAME
-
-  valueFrom:
-
-    secretKeyRef:
-
-      name: postgres-secret
-
-      key: db_username
-
-- name: DB_PASSWORD
-
-  valueFrom:
-
-    secretKeyRef:
-
-      name: postgres-secret
-
-      key: db_password
-
+  name: backend-deployment
+  namespace: development
 spec:
-
   replicas: 2
-
   selector:
     matchLabels:
       app: backend
-
   template:
-
     metadata:
       labels:
         app: backend
-
     spec:
-
       containers:
-
       - name: backend
-
-        image: 931075223779.dkr.ecr.us-east-1.amazonaws.com/backend:latest
-
+        image: backend-image-placeholder
         ports:
         - containerPort: 8000
+        env:
+        - name: db_username
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: db_username
+        - name: db_password
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: db_password
