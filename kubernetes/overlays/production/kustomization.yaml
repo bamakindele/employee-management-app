@@ -11,7 +11,7 @@ resources:
 
 images:
   - name: backend
-    newName: 931075223779.dkr.ecr.us-east-1.amazonaws.com/backend-fastapi
+    newName: 931075223779.dkr.ecr.us-east-1.amazonaws.com/backend
     newTag: latest
   - name: frontend
     newName: 931075223779.dkr.ecr.us-east-1.amazonaws.com/frontend

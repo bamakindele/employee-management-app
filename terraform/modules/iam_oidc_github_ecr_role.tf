@@ -38,17 +38,17 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
-            "ecr:GetAuthorizationToken",
-            "ecr:BatchCheckLayerAvailability",
-            "ecr:CompleteLayerUpload",
-            "ecr:InitiateLayerUpload",
-            "ecr:PutImage",
-            "ecr:UploadLayerPart",
-            "ecr:BatchGetImage",
-            "ecr:DescribeRepositories",
-            "ecr:GetDownloadUrlForLayer"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:BatchGetImage",
+          "ecr:DescribeRepositories",
+          "ecr:GetDownloadUrlForLayer"
         ]
         Resource = "*"
       },
@@ -63,7 +63,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
         ]
         Resource = [
           "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/frontend",
-          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/backend-fastapi"
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/backend"
         ]
       }
     ]

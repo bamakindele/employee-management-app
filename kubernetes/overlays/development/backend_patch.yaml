@@ -8,5 +8,5 @@ spec:
     spec:
       containers:
         - name: backend
-          image: emp_backend:dev
+          image: backend:dev
           imagePullPolicy: IfNotPresent

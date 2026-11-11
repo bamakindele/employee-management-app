@@ -59,7 +59,7 @@ The root `.github/workflows/ci.yml` workflow runs application checks on pull
 requests and pushes to `main`. Only a push to `main` that passes those checks
 runs the **Build and publish ECR images** job. It builds and scans the frontend
 and backend images, then pushes both the commit-SHA and `latest` tags to the
-`frontend` and `backend-fastapi` ECR repositories in `us-east-1`. Trivy findings are
+`frontend` and `backend` ECR repositories in `us-east-1`. Trivy findings are
 currently informational and do not block publishing.
 
 The OIDC trust policy in `modules/iam_oidc_github_ecr_role.tf` restricts role
@@ -70,7 +70,7 @@ Actions secret named `AWS_ROLE_ARN`, whose value is the IAM role ARN. Add or
 update that secret in **GitHub repository Settings → Secrets and variables →
 Actions**. Do not store long-lived AWS access keys in GitHub.
 
-The ECR repositories (`frontend` and `backend-fastapi`) are defined in
+The ECR repositories (`frontend` and `backend`) are defined in
 `modules/ecr.tf`. Ensure both
 repositories and the OIDC role are provisioned in the same AWS account and
 region used by the workflow.

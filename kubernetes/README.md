@@ -56,7 +56,7 @@ kubectl exec -it -n development deployment/backend -- python create_user.py```
 ## EKS production
 
 The production image names match the Terraform ECR repositories:
-`frontend` and `backend-fastapi` in `us-east-1`. The EKS worker-node role must
+`frontend` and `backend` in `us-east-1`. The EKS worker-node role must
 have permission to pull from these private repositories. Terraform currently
 attaches the ECR read-only managed policy to that role.
 

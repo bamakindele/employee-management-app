@@ -79,7 +79,7 @@ jobs:
       # These values must match the AWS region and ECR repositories in Terraform.
       AWS_REGION: us-east-1
       FRONTEND_REPO: frontend
-      BACKEND_REPO: backend-fastapi
+      BACKEND_REPO: backend
       # Tag images with the triggering commit so each published build is traceable.
       IMAGE_TAG: ${{ github.sha }}
 

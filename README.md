@@ -92,7 +92,7 @@ To enable publishing:
    Actions**, add a repository secret named `AWS_ROLE_ARN`, and set its value
    to the IAM role ARN created by Terraform (for example,
    `arn:aws:iam::<account-id>:role/github-actions-ecr-role`).
-3. Ensure the `frontend` and `backend-fastapi` ECR repositories exist in the
+3. Ensure the `frontend` and `backend` ECR repositories exist in the
    same AWS account and `us-east-1` region as the IAM role.
 4. Push a commit to `main` and inspect the **Build and publish ECR images** job
    in the **CI Pipeline** run. Pull-request runs do not publish images.
