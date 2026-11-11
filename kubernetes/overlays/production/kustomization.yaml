@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: production
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+  - external-secret.yaml
+
+images:
+  - name: backend
+    newName: 931075223779.dkr.ecr.us-east-1.amazonaws.com/backend-fastapi
+    newTag: latest
+  - name: frontend
+    newName: 931075223779.dkr.ecr.us-east-1.amazonaws.com/frontend
+    newTag: latest
+
+patches:
+  - path: backend-image-patch.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: backend
+  - path: frontend-image-patch.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: frontend

@@ -92,8 +92,8 @@ To enable publishing:
    Actions**, add a repository secret named `AWS_ROLE_ARN`, and set its value
    to the IAM role ARN created by Terraform (for example,
    `arn:aws:iam::<account-id>:role/github-actions-ecr-role`).
-3. Ensure the `frontend` and `backend` ECR repositories exist in the same AWS
-   account and `us-east-1` region as the IAM role.
+3. Ensure the `frontend` and `backend-fastapi` ECR repositories exist in the
+   same AWS account and `us-east-1` region as the IAM role.
 4. Push a commit to `main` and inspect the **Build and publish ECR images** job
    in the **CI Pipeline** run. Pull-request runs do not publish images.
 
@@ -121,88 +121,8 @@ Backend: wheel -- CVE-2026-24049
 Frontend: brotli-libs -- CVE-2026-111497
 Frontend: curl -- CVE-2026-92392
 
-# kubernetes: 
+## Kubernetes
 
-## Local Kubernetes validation
-
-Local Kubernetes validation was performed using Docker Desktop Kubernetes.
-Application deployments successfully created pods and ReplicaSets. Image pulls
-from private Amazon ECR repositories failed as expected because Docker Desktop
-Kubernetes was not configured with ECR authentication. In production, Amazon
-EKS worker nodes authenticate using IAM roles and pull images directly from ECR.
-
-1. Namespace
-
-namespace/
-
-namespace.yaml
-
-development.yaml
-
-Creates the namespace where your application resources will run.
-
-2. ConfigMaps
-
-configmaps/
-
-- application-config.yaml
-
-Creates application configuration before deploying containers.
-
-3. Secrets
-
-secrets/
-
-- placeholder-secret.yaml
-
-Creates credentials and sensitive configuration required by your application. Replace placeholders with real secrets securely.
-
-4. PostgreSQL storage
-
-postgres/
-
-- pvc.yaml
-
-Creates persistent storage for the PostgreSQL database.
-
-5. PostgreSQL database
-
-postgres/
-
-deployment.yaml
-
-service.yaml
-
-Starts the database and exposes it internally.
-
-6. Backend (FastAPI)
-
-backend/
-
-deployment.yaml
-
-service.yaml
-
-hpa.yaml
-
-Deploys your FastAPI application and exposes it internally. Configure the HPA after its metrics prerequisites are available.
-
-7. Frontend
-
-frontend/
-
-deployment.yaml
-
-service.yaml
-
-hpa.yaml
-
-Deploys your frontend and exposes it internally.
-
-8. Ingress
-
-ingress/
-
-- ingress.yaml
-
-Configures external HTTP/HTTPS access to your frontend and backend.
+The Kustomize overlays separate local Docker Desktop development from
+production on EKS. See [kubernetes/README.md](kubernetes/README.md) for image
+builds, local secret setup, deployment commands, and EKS prerequisites.

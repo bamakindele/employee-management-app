@@ -96,6 +96,12 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+
+@app.get("/api/health", include_in_schema=False)
+def health_check():
+    return {"status": "ok"}
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 

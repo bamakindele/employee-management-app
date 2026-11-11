@@ -79,7 +79,7 @@ jobs:
       # These values must match the AWS region and ECR repositories in Terraform.
       AWS_REGION: us-east-1
       FRONTEND_REPO: frontend
-      BACKEND_REPO: backend
+      BACKEND_REPO: backend-fastapi
       # Tag images with the triggering commit so each published build is traceable.
       IMAGE_TAG: ${{ github.sha }}
 
@@ -89,9 +89,9 @@ jobs:
 
       - name: Build frontend image
         run: |
-          # Build the frontend container from its Dockerfile and tag it with this commit.
-          # The explicit latest tag makes the newest successful main build easy to find.
+          # Production serves the API through the ALB's same-origin /api route.
           docker build \
+            --build-arg VITE_API_URL=/api \
             --tag "$FRONTEND_REPO:$IMAGE_TAG" \
             --tag "$FRONTEND_REPO:latest" \
             ./frontend
