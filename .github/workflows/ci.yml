@@ -104,13 +104,18 @@ jobs:
             --tag "$BACKEND_REPO:$IMAGE_TAG" \
             --tag "$BACKEND_REPO:latest" \
             ./backend-fastapi
+      
+      # Verify that the images were built successfully and are available locally.
+      - name: Verify Images
+        run: |
+          docker images
 
       # Report HIGH/CRITICAL OS and library findings without blocking the push,
       # matching the current policy. Set exit-code to "1" to block pushes on findings.
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: backend:${{ github.sha }}
+          image-ref: backend:${{ env.IMAGE_TAG }}
           format: table
           exit-code: "0"
           ignore-unfixed: true
@@ -120,7 +125,7 @@ jobs:
       - name: Scan frontend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: frontend:${{ github.sha }}
+          image-ref: frontend:${{ env.IMAGE_TAG }}
           format: table
           exit-code: "0"
           ignore-unfixed: true
