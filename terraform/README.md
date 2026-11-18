@@ -29,6 +29,7 @@ The `.tf` files are grouped by infrastructure concern:
 | `security_groups.tf` | EKS node and RDS network rules |
 | `iam_eks_cluster_role.tf`, `iam_node_group_role.tf` | IAM roles and policies for EKS |
 | `iam_oidc_github_ecr_role.tf` | GitHub Actions OIDC provider, deployment role, and scoped ECR push policy |
+| `iam_oidc_external_secrets.tf` | EKS OIDC provider and an IRSA role scoped to the production application secrets |
 | `eks_cluster.tf`, `eks_node_group.tf` | EKS control plane and managed worker nodes |
 | `ecr.tf` | Frontend and backend container image repositories |
 | `rds_subnet_group.tf`, `rds.tf` | Private database subnet group and PostgreSQL instance |
@@ -74,6 +75,45 @@ The ECR repositories (`frontend` and `backend`) are defined in
 `modules/ecr.tf`. Ensure both
 repositories and the OIDC role are provisioned in the same AWS account and
 region used by the workflow.
+
+## External Secrets Operator IRSA
+
+The `external-secrets` ServiceAccount uses the EKS OIDC provider to assume a
+dedicated IAM role. The role trust is restricted to that ServiceAccount, and
+its permissions are limited to the `production/postgres` and
+`production/application` Secrets Manager secrets.
+
+After installing External Secrets Operator, review and apply only the role
+resources from the repository root:
+
+```sh
+terraform -chdir=terraform/modules plan \
+  -target=aws_iam_openid_connect_provider.eks \
+  -target=aws_iam_role.external_secrets \
+  -target=aws_iam_role_policy.external_secrets_secrets_manager
+
+# Review the plan before applying.
+terraform -chdir=terraform/modules apply \
+  -target=aws_iam_openid_connect_provider.eks \
+  -target=aws_iam_role.external_secrets \
+  -target=aws_iam_role_policy.external_secrets_secrets_manager
+```
+
+Annotate the operator ServiceAccount with the Terraform-created role and
+restart the operator so its pods use the updated ServiceAccount:
+
+```sh
+ROLE_ARN=$(terraform -chdir=terraform/modules output -raw external_secrets_role_arn)
+kubectl annotate serviceaccount external-secrets \
+  --namespace external-secrets \
+  eks.amazonaws.com/role-arn="$ROLE_ARN" --overwrite
+kubectl rollout restart deployment/external-secrets --namespace external-secrets
+kubectl rollout status deployment/external-secrets --namespace external-secrets
+```
+
+The role policy assumes the secrets use the AWS managed Secrets Manager key.
+If they use a customer-managed KMS key, grant this role `kms:Decrypt` on that
+key and ensure the key policy permits it.
 
 To review and apply only the GitHub OIDC role and its ECR permissions, run from
 the repository root:

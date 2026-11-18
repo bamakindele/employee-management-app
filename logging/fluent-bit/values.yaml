@@ -1,0 +1,11 @@
+image:
+  repository: fluent/fluent-bit
+  tag: 3.2.5
+config:
+  outputs: |
+    [OUTPUT]
+        Name cloudwatch_logs
+        Match *
+        region us-east-1
+        log_group_name devops-platform-logs
+        log_stream_prefix kubernetes-

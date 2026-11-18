@@ -126,3 +126,17 @@ Frontend: curl -- CVE-2026-92392
 The Kustomize overlays separate local Docker Desktop development from
 production on EKS. See [kubernetes/README.md](kubernetes/README.md) for image
 builds, local secret setup, deployment commands, and EKS prerequisites.
+
+## Logging Architecture
+
+Fluent Bit was deployed as a Kubernetes DaemonSet and configured to forward
+container logs to AWS CloudWatch Logs.
+
+During local validation on Docker Desktop Kubernetes, Fluent Bit successfully
+initialized the CloudWatch output plugin and attempted to create log streams in
+the configured log group. Log delivery failed as expected because the local
+cluster does not have AWS IAM credentials.
+
+In the target Amazon EKS environment, Fluent Bit will authenticate using IAM
+Roles for Service Accounts (IRSA) and forward logs to CloudWatch without
+requiring static credentials.
