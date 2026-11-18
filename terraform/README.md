@@ -66,6 +66,8 @@ currently informational and do not block publishing.
 The OIDC trust policy in `modules/iam_oidc_github_ecr_role.tf` restricts role
 assumption to `bamakindele/employee-management-app` on `main`; its inline
 permissions allow image pushes only to the two application repositories. The
+trust condition uses GitHub's immutable owner and repository IDs in the OIDC
+subject claim. Update it if the repository is transferred or recreated. The
 workflow uses short-lived OIDC credentials and requires a GitHub repository
 Actions secret named `AWS_ROLE_ARN`, whose value is the IAM role ARN. Add or
 update that secret in **GitHub repository Settings → Secrets and variables →
