@@ -1,6 +1,6 @@
 # Employee Management App
 
-## Local development
+## Local development/PC
 
 Start the PostgreSQL database used by the app:
 
@@ -73,6 +73,8 @@ The script prompts for a username and password. Employee directory records are
 added separately from the signed-in frontend.
 
 ## CI and publishing images to Amazon ECR
+Prerequisite: terraform apply ecr.tf, iam_oidc_github_ecr_role.tf to create GitHub OIDC provider, role, and ECR permissions
+
 
 The GitHub Actions workflow at `.github/workflows/ci.yml` runs application
 checks for pull requests and pushes to `main`. For a push to `main`, it also

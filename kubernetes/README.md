@@ -9,7 +9,7 @@ The Kustomize overlays keep local development and EKS production separate:
   connects to the production database through a secret-provided URL, and uses
   an AWS Application Load Balancer Ingress. PostgreSQL is not deployed in EKS.
 
-## Docker Desktop development
+## Docker Desktop development with k8 cluster - Local Kubernetes
 
 Run these commands from the repository root. Docker Desktop Kubernetes must be
 using the same local Docker image store.
@@ -36,6 +36,13 @@ kubectl create namespace development --dry-run=client -o yaml | kubectl apply -f
 Set strong `JWT_SECRET` and URL-safe `POSTGRES_PASSWORD` values in the root
 `.env` file. Do not commit `.env`. From Git Bash at the repository root, create
 or update the namespace's runtime secret from those values:
+
+# The bash script below performs the following functions:
+Enable strict bash execution 
+load/validate env variables 
+set default psql values 
+create k8 secret
+generate and apply k8 secret
 
 ```bash
 (
@@ -85,7 +92,7 @@ kubectl port-forward --namespace development service/backend-service 8000:8000
 ```
 
 Browse to `http://localhost:5173`. The locally built frontend calls the
-forwarded API at `http://localhost:8000/api`.
+forwarded API at `http://localhost:8000/docs`.
 
 Create a sign-in account in the development database:
 
@@ -123,6 +130,7 @@ terraform -chdir=terraform/modules apply
 
 Configure kubectl for the Terraform-created EKS cluster and verify the active
 AWS account and Kubernetes context before proceeding:
+The bash script below establishes a connection between my local terminal and AWS Kubernetes cluster
 
 ```bash
 AWS_REGION=us-east-1
