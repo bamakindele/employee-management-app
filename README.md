@@ -43,10 +43,10 @@ Create a sign-in account (called a user in the database) from the backend
 directory in PowerShell:
 
 ```powershell
+Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 cd backend-fastapi
 .\.venv\Scripts\python.exe create_user.py
 ```
-
 The script prompts for a username and password. It creates a login account;
 employee directory records are added separately from the signed-in frontend.
 
