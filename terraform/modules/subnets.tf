@@ -8,6 +8,12 @@ resource "aws_subnet" "public_a" {
   availability_zone = "us-east-1a"
 
   map_public_ip_on_launch = true
+
+  tags = merge(local.tags, {
+    Environment                            = "production"
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/elb"               = "1"
+  })
 }
 
 resource "aws_subnet" "public_b" {
@@ -18,6 +24,12 @@ resource "aws_subnet" "public_b" {
   availability_zone = "us-east-1b"
 
   map_public_ip_on_launch = true
+
+  tags = merge(local.tags, {
+    Environment                            = "production"
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/elb"               = "1"
+  })
 }
 
 resource "aws_subnet" "private_a" {
@@ -26,6 +38,12 @@ resource "aws_subnet" "private_a" {
 
   cidr_block        = "10.0.11.0/24"
   availability_zone = "us-east-1a"
+
+  tags = merge(local.tags, {
+    Environment                            = "production"
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/internal-elb"      = "1"
+  })
 }
 
 resource "aws_subnet" "private_b" {
@@ -34,4 +52,10 @@ resource "aws_subnet" "private_b" {
 
   cidr_block        = "10.0.12.0/24"
   availability_zone = "us-east-1b"
+
+  tags = merge(local.tags, {
+    Environment                            = "production"
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/internal-elb"      = "1"
+  })
 }

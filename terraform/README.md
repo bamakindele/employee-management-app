@@ -9,6 +9,7 @@ terraform/
 ├── architecture_doc/   Architecture diagrams
 ├── screenshots/        Screenshots of the deployed AWS resources and Terraform output
 ├── modules/            Terraform working directory and infrastructure configuration
+├── eks-addons/         Separate Terraform root for EKS Helm add-ons
 └── README.md
 ```
 
@@ -78,44 +79,28 @@ The ECR repositories (`frontend` and `backend`) are defined in
 repositories and the OIDC role are provisioned in the same AWS account and
 region used by the workflow.
 
-## External Secrets Operator IRSA
+## EKS add-ons
 
-The `external-secrets` ServiceAccount uses the EKS OIDC provider to assume a
-dedicated IAM role. The role trust is restricted to that ServiceAccount, and
-its permissions are limited to the `production/postgres` and
-`production/application` Secrets Manager secrets.
+After applying the base AWS configuration in `modules/`, use the separate
+`eks-addons/` Terraform root to install External Secrets Operator and the AWS
+Load Balancer Controller and provision the latter's IAM role and policy. This
+root reads the existing EKS cluster and External Secrets IAM role; it does not
+create the VPC, EKS cluster, RDS instance, or application Secrets Manager
+values.
 
-After installing External Secrets Operator, review and apply only the role
-resources from the repository root:
+Run from the repository root after the cluster is available:
 
 ```sh
-terraform -chdir=terraform/modules plan \
-  -target=aws_iam_openid_connect_provider.eks \
-  -target=aws_iam_role.external_secrets \
-  -target=aws_iam_role_policy.external_secrets_secrets_manager
-
+terraform -chdir=terraform/eks-addons init
+terraform -chdir=terraform/eks-addons plan
 # Review the plan before applying.
-terraform -chdir=terraform/modules apply \
-  -target=aws_iam_openid_connect_provider.eks \
-  -target=aws_iam_role.external_secrets \
-  -target=aws_iam_role_policy.external_secrets_secrets_manager
+terraform -chdir=terraform/eks-addons apply
 ```
 
-Annotate the operator ServiceAccount with the Terraform-created role and
-restart the operator so its pods use the updated ServiceAccount:
-
-```sh
-ROLE_ARN=$(terraform -chdir=terraform/modules output -raw external_secrets_role_arn)
-kubectl annotate serviceaccount external-secrets \
-  --namespace external-secrets \
-  eks.amazonaws.com/role-arn="$ROLE_ARN" --overwrite
-kubectl rollout restart deployment/external-secrets --namespace external-secrets
-kubectl rollout status deployment/external-secrets --namespace external-secrets
-```
-
-The role policy assumes the secrets use the AWS managed Secrets Manager key.
-If they use a customer-managed KMS key, grant this role `kms:Decrypt` on that
-key and ensure the key policy permits it.
+The add-on root pins both Helm chart versions. Secret values remain outside
+Terraform state; create the `production/postgres` and
+`production/application` values in AWS Secrets Manager as described in the
+[Kubernetes deployment guide](../kubernetes/README.md#eks-production).
 
 To review and apply only the GitHub OIDC role and its ECR permissions, run from
 the repository root:
@@ -148,9 +133,12 @@ terraform -chdir=terraform/modules plan
 terraform -chdir=terraform/modules apply
 ```
 
-Review the plan before applying. These resources can incur AWS charges, especially EKS, the NAT Gateway, and RDS. When the infrastructure is no longer needed, review the resources and dependencies before running:
+Review the plan before applying. These resources can incur AWS charges, especially EKS, the NAT Gateway, and RDS. When the infrastructure is no longer needed, remove Kubernetes application
+resources first. Destroy the add-on root while the EKS cluster is still
+available, then destroy the base infrastructure root:
 
 ```sh
+terraform -chdir=terraform/eks-addons destroy
 terraform -chdir=terraform/modules destroy
 ```
 
