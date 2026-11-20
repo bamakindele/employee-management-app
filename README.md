@@ -84,7 +84,7 @@ Each image is pushed with both the triggering commit SHA and the rolling
 `latest` tag. Trivy reports HIGH and CRITICAL findings, but currently does not
 fail the job because its `exit-code` is set to `0`.
 
-To enable publishing:
+To enable publishing to ECR:
 
 1. Provision the GitHub OIDC provider, IAM role, and ECR push policy using the
    instructions in [terraform/README.md](terraform/README.md).
