@@ -145,16 +145,14 @@ Secret values are intentionally not managed by Terraform.
 In AWS Secrets Manager in `us-east-1`, create:
 
 - `production/postgres` with a `DATABASE_URL` property using the RDS endpoint
-  from `terraform -chdir=terraform/modules output -raw rds_endpoint` and a
-  URL-encoded database password.
+  from `terraform -chdir=terraform/modules output -raw rds_endpoint`, a
+  URL-encoded database password, and the database name `employee_management`.
 - `production/application` with a strong `JWT_SECRET` property.
 
-# Connect local kubectl configuration to an AWS EKS Kubernetes cluster named devops-cluster in the us-east-1 region.
-```bash
-aws eks update-kubeconfig --region us-east-1 --name devops-cluster
-```
-
 Do not put secret values in manifests, command history, or Terraform state.
+The property names are case-sensitive. If RDS was destroyed and recreated,
+update `production/postgres` with the new endpoint and password before
+continuing.
 
 ### 4. Publish production images
 
@@ -184,14 +182,105 @@ kubectl apply -f ./kubernetes/overlays/production/cluster-scoped/cluster-secret-
 kubectl wait --for=condition=Ready clustersecretstore/aws-secrets-manager --timeout=180s
 kubectl apply -k ./kubernetes/overlays/production
 kubectl wait --for=condition=Ready externalsecret/application-secret --namespace production --timeout=180s
-kubectl rollout status deployment/backend --namespace production --timeout=300s
-kubectl rollout status deployment/frontend --namespace production --timeout=300s
-kubectl get pods,ingress --namespace production
+kubectl describe secret application-secret --namespace production
 ```
 
 The Kustomize overlay creates the `production` namespace. The Ingress currently
 uses the controller's default internal scheme, so its ALB is reachable only
 from the VPC or a connected network.
+
+### 6. Create the application database on a new RDS instance
+
+The current `terraform/modules/rds.tf` does not set an initial database name.
+After RDS is newly created, run this one-time Kubernetes Job to create
+`employee_management`. It connects from inside the EKS VPC using the already
+synced `DATABASE_URL`, but connects to the existing `postgres` database while
+creating the application database. The script checks first, so it is safe to
+rerun; if the database already exists, it makes no change.
+
+Destroying RDS deletes its data; this Job creates an empty database and does
+not restore previous records. Take and retain a snapshot first if the data
+must be preserved.
+
+Do not add `db_name` to Terraform and apply against an existing RDS instance
+without reviewing the plan; setting an initial database name can require
+replacing the instance.
+
+```bash
+(
+  set -euo pipefail
+  BACKEND_IMAGE="$(kubectl get deployment backend --namespace production -o jsonpath='{.spec.template.spec.containers[0].image}')"
+  test -n "$BACKEND_IMAGE" || { echo "Backend image not found"; exit 1; }
+  kubectl delete job create-employee-management-db --namespace production --ignore-not-found
+
+cat <<EOF | kubectl apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-employee-management-db
+  namespace: production
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: create-database
+          image: ${BACKEND_IMAGE}
+          imagePullPolicy: Always
+          command: ["python", "-c"]
+          args:
+            - |
+              import os
+              from sqlalchemy import create_engine, text
+              from sqlalchemy.engine import make_url
+
+              url = make_url(os.environ["DATABASE_URL"]).set(database="postgres")
+              engine = create_engine(url, isolation_level="AUTOCOMMIT")
+              with engine.connect() as connection:
+                  exists = connection.execute(
+                      text("SELECT 1 FROM pg_database WHERE datname = :name"),
+                      {"name": "employee_management"},
+                  ).scalar_one_or_none()
+                  if exists is None:
+                      connection.exec_driver_sql(
+                          'CREATE DATABASE "employee_management"'
+                      )
+                      print("Created employee_management")
+                  else:
+                      print("employee_management already exists")
+              engine.dispose()
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: application-secret
+                  key: DATABASE_URL
+EOF
+
+kubectl wait --for=condition=complete job/create-employee-management-db --namespace production --timeout=300s
+kubectl logs job/create-employee-management-db --namespace production
+kubectl delete job create-employee-management-db --namespace production
+kubectl rollout restart deployment/backend --namespace production
+kubectl rollout status deployment/backend --namespace production --timeout=300s
+kubectl rollout status deployment/frontend --namespace production --timeout=300s
+kubectl get pods,ingress --namespace production
+)
+```
+
+The Job uses the RDS credentials from the Kubernetes Secret without printing
+them. If the Job fails, inspect it with:
+
+```bash
+kubectl describe job create-employee-management-db --namespace production
+kubectl logs job/create-employee-management-db --namespace production
+```
+
+If it reports a permission error, use an RDS account with permission to create
+databases. After creation, the backend startup creates its tables.
 
 Create the initial application login if needed:
 
@@ -199,7 +288,7 @@ Create the initial application login if needed:
 kubectl exec -it --namespace production deployment/backend -- python create_user.py
 ```
 
-### 6. Deploy later image updates
+### 7. Deploy later image updates
 
 After the ECR publishing workflow succeeds, restart the deployments to pull the
 new `latest` images:
